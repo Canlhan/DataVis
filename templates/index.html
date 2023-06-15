@@ -1,0 +1,96 @@
+<!-- index.html -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div id="year-histogram"></div>
+    <div id="authors-pie-chart"></div>
+         <div id="word-cloud">
+            <img src="{{ url_for('static', filename='word_cloud.png', _external=True) }}" alt="Word Cloud">
+
+        </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/wordcloud@2.1.0/dist/wordcloud.min.js"></script>
+
+   <script>
+    // Get data passed from backend
+    var data = {{ data|tojson }};
+
+    // Create year histogram
+    var years = data.map(function(pub) {
+        return pub.year;
+    });
+    var yearCounts = {};
+    years.forEach(function(year) {
+        yearCounts[year] = (yearCounts[year] || 0) + 1;
+    });
+
+    var yearData = [{
+        x: Object.keys(yearCounts),
+        y: Object.values(yearCounts),
+        type: 'bar'
+    }];
+    var layout = {
+    xaxis: {
+        tickmode: 'linear'
+    }
+};
+    Plotly.newPlot('year-histogram', yearData, layout);
+
+    // Create authors pie chart
+    var authors = data.map(function(pub) {
+        return pub.authors;
+    }).flat();
+    var authorCounts = {};
+    authors.forEach(function(author) {
+        author=author.trim()
+        if (author !== 'B Canbula') {
+
+            authorCounts[author] = (authorCounts[author] || 0) + 1;
+        }
+    });
+
+    // Calculate total publication count
+    var totalCount = Object.values(authorCounts).reduce((a, b) => a + b, 0);
+
+    // Calculate percentages
+    var percentages = {};
+    for (var author in authorCounts) {
+        percentages[author] = (authorCounts[author] / totalCount) * 100;
+    }
+
+    var authorData = [{
+        values: Object.values(percentages),
+        labels: Object.keys(percentages),
+        type: 'pie'
+    }];
+    Plotly.newPlot('authors-pie-chart', authorData);
+
+    // Create word cloud (using a suitable library or API)
+    // Extract titles from data
+    var titles = data.map(function(pub) {
+        return pub.title;
+    });
+
+    // Join titles into a single string
+    var text = titles.join(' ');
+
+    // Create word cloud
+    var options = {
+        list: text.split(' '),
+        gridSize: Math.round(16 * $('#word-cloud').width() / 1024),
+        weightFactor: function(size) {
+            return Math.pow(size, 2.3) * $('#word-cloud').width() / 1024;
+        }
+    };
+    WordCloud($('#word-cloud')[0], options).then(function(wordcloud) {
+    $('#word-cloud').append(wordcloud);
+        });
+    // Add code to generate word cloud based on publication titles
+</script>
+
+</body>
+</html>
